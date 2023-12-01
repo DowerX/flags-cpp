@@ -1,10 +1,11 @@
 #include "flags.h"
-#include <sstream>
+
 #include <iostream>
+#include <sstream>
 
 namespace Flags {
 
-std::vector<std::string> split(const std::string &input, const char separator) {
+std::vector<std::string> split(const std::string& input, const char separator) {
   std::vector<std::string> result;
   std::istringstream stream(input);
   std::string part;
@@ -14,8 +15,8 @@ std::vector<std::string> split(const std::string &input, const char separator) {
   return result;
 }
 
-bool starts_with(const std::string &input, const std::string &start) {
-  return (input.size() >= start.size() && input.substr(0, 2) == start);
+bool starts_with(const std::string& input, const std::string& start) {
+  return (input.size() >= start.size() && input.substr(0, start.size()) == start);
 }
 
 PARSER(StringFlag, std::string, {
@@ -29,7 +30,7 @@ PARSER(IntFlag, int, {
   try {
     value = std::stoi(arg);
     set_parsed(true);
-  } catch (std::exception &) {
+  } catch (std::exception&) {
   }
 })
 
@@ -38,7 +39,7 @@ PARSER(LongIntFlag, long int, {
   try {
     value = std::stol(arg);
     set_parsed(true);
-  } catch (std::exception &) {
+  } catch (std::exception&) {
   }
 })
 
@@ -47,7 +48,7 @@ PARSER(LongLongIntFlag, long long int, {
   try {
     value = std::stoll(arg);
     set_parsed(true);
-  } catch (std::exception &) {
+  } catch (std::exception&) {
   }
 })
 
@@ -56,7 +57,7 @@ PARSER(UnsignedLongIntFlag, unsigned long int, {
   try {
     value = std::stoul(arg);
     set_parsed(true);
-  } catch (std::exception &) {
+  } catch (std::exception&) {
   }
 })
 
@@ -65,7 +66,7 @@ PARSER(UnsignedLongLongIntFlag, unsigned long long int, {
   try {
     value = std::stoull(arg);
     set_parsed(true);
-  } catch (std::exception &) {
+  } catch (std::exception&) {
   }
 })
 
@@ -74,7 +75,7 @@ PARSER(FloatFlag, float, {
   try {
     value = std::stof(arg);
     set_parsed(true);
-  } catch (std::exception &) {
+  } catch (std::exception&) {
   }
 })
 
@@ -83,7 +84,7 @@ PARSER(DoubleFlag, double, {
   try {
     value = stod(arg);
     set_parsed(true);
-  } catch (std::exception &) {
+  } catch (std::exception&) {
   }
 })
 
@@ -92,36 +93,33 @@ PARSER(LongDoubleFlag, long double, {
   try {
     value = stold(arg);
     set_parsed(true);
-  } catch (std::exception &) {
+  } catch (std::exception&) {
   }
 })
 
 PARSER(BoolFlag, bool, {
   std::string copy(arg);
-  std::transform(copy.begin(), copy.end(), copy.begin(),
-                 [](const char c) { return std::tolower(c); });
+  std::transform(copy.begin(), copy.end(), copy.begin(), [](const char c) { return std::tolower(c); });
   if (copy == "false")
     value = false;
   else
     value = true;
 })
 
-Parser::Parser(const std::string &prefix, const std::string &help_text)
-    : prefix(prefix), help_text(help_text) {
+Parser::Parser(const std::string& prefix, const std::string& help_text) : prefix(prefix), help_text(help_text) {
   set_parser<std::string>(flag_constructor_t(StringFlag::make));
   set_parser<int>(flag_constructor_t(IntFlag::make));
   set_parser<long int>(flag_constructor_t(LongIntFlag::make));
   set_parser<long long int>(flag_constructor_t(LongLongIntFlag::make));
   set_parser<unsigned long int>(flag_constructor_t(UnsignedLongIntFlag::make));
-  set_parser<unsigned long long int>(
-      flag_constructor_t(UnsignedLongLongIntFlag::make));
+  set_parser<unsigned long long int>(flag_constructor_t(UnsignedLongLongIntFlag::make));
   set_parser<float>(flag_constructor_t(FloatFlag::make));
   set_parser<double>(flag_constructor_t(DoubleFlag::make));
   set_parser<long double>(flag_constructor_t(LongDoubleFlag::make));
   set_parser<bool>(flag_constructor_t(BoolFlag::make));
 }
 
-bool Parser::parse(int argc, char **argv) {
+bool Parser::parse(int argc, char** argv) {
   // put each argument into a std::string
   std::vector<std::string> args;
   for (int i = 0; i < argc; i++) {
@@ -136,15 +134,14 @@ bool Parser::parse(int argc, char **argv) {
 
   // search for flags
   for (size_t i = 1; i < args.size() - 1; i++) {
-    const std::string &arg = args[i];
+    const std::string& arg = args[i];
     if (starts_with(arg, prefix) && arg.size() > prefix.size()) {
       flags[arg.substr(prefix.size())]->parse(args[i + 1]);
     }
   }
 
   // check for the last argument
-  if (starts_with(args[args.size() - 1], prefix) &&
-      args[args.size() - 1].size() > prefix.size()) {
+  if (starts_with(args[args.size() - 1], prefix) && args[args.size() - 1].size() > prefix.size()) {
     flags[args[args.size() - 1].substr(prefix.size())]->parse("");
   }
 
@@ -152,23 +149,18 @@ bool Parser::parse(int argc, char **argv) {
 }
 
 unsigned Parser::get_parsed() const {
-  return std::count_if(
-      flags.begin(), flags.end(),
-      [](std::pair<std::string, Flag *> f) { return f.second->get_parsed(); });
+  return std::count_if(flags.begin(), flags.end(), [](std::pair<std::string, Flag*> f) { return f.second->get_parsed(); });
 }
 
 unsigned Parser::get_found() const {
-  return std::count_if(
-      flags.begin(), flags.end(),
-      [](std::pair<std::string, Flag *> f) { return f.second->get_found(); });
+  return std::count_if(flags.begin(), flags.end(), [](std::pair<std::string, Flag*> f) { return f.second->get_found(); });
 }
 
 void Parser::help() const {
   std::cout << help_text << std::endl;
 
   for (auto f : flags) {
-    std::cout << '\t' << prefix << f.first << ": "
-              << f.second->get_description() << std::endl;
+    std::cout << '\t' << prefix << f.first << ": " << f.second->get_description() << std::endl;
   }
 }
 } // namespace Flags
