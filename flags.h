@@ -1,9 +1,7 @@
 #ifndef FLAGS_H
 #define FLAGS_H
 
-#include <algorithm>
 #include <functional>
-#include <iostream>
 #include <map>
 #include <string>
 #include <typeindex>
@@ -31,40 +29,43 @@ public:
   Flag(const std::string &description, const bool required)
       : description(description), found(!required), parsed(false) {}
 
-  virtual ~Flag() {};
+  virtual ~Flag(){};
 
   const std::string &get_description() const { return description; }
-  const bool get_found() const { return found; }
-  const bool get_parsed() const { return parsed; }
+  bool get_found() const { return found; }
+  bool get_parsed() const { return parsed; }
 
-  virtual void parse(const std::string &arg) {}
+  virtual void parse(const std::string &arg) = 0;
 };
 
 // type of flag based parser classes' factory functions
 typedef std::function<Flag *(const void *, const std::string &, const bool)>
     flag_constructor_t;
 
-class StringFlag : public Flag {
-  std::string value;
+// use this class to create your own parser
+template <typename T> class FlagTemplate : public Flag {
+protected:
+  T value;
 
 public:
-  StringFlag(const void *default_value, const std::string &description,
-             const bool required)
-      : Flag(description, required), value(*(std::string *)default_value) {}
-
-  static Flag *make(const void *default_value, const std::string &description,
-                    const bool required) {
-    return new StringFlag(default_value, description, required);
-  }
+  explicit FlagTemplate<T>(const void *default_value,
+                           const std::string &description, const bool required)
+      : Flag(description, required), value(*(T *)default_value) {}
 
   const void *get_value_ptr() const override { return &value; };
-
-  void parse(const std::string &arg) override {
-    set_found(true);
-    set_parsed(true);
-    value = arg;
-  }
 };
+
+#define PARSER(name, type, func)                                               \
+  class name : public FlagTemplate<type> {                                     \
+    using FlagTemplate<type>::FlagTemplate;                                    \
+                                                                               \
+  public:                                                                      \
+    static Flag *make(const void *default_value,                               \
+                      const std::string &description, const bool required) {   \
+      return new name(default_value, description, required);                   \
+    }                                                                          \
+    void parse(const std::string &arg) override func                           \
+  }; // namespace Flags
 
 // flag holder, parsing orchestrator
 class Parser {
@@ -76,10 +77,7 @@ private:
   std::map<std::type_index, flag_constructor_t> constructors;
 
 public:
-  Parser(const std::string &prefix, const std::string &help_text)
-      : prefix(prefix), help_text(help_text) {
-    set_parser<std::string>(flag_constructor_t(StringFlag::make));
-  }
+  Parser(const std::string &prefix, const std::string &help_text);
 
   Parser() : Parser("--", "Help:") {}
 
@@ -89,7 +87,8 @@ public:
     }
   }
 
-  template <typename T> void set_parser(flag_constructor_t constructor_function) {
+  template <typename T>
+  void set_parser(flag_constructor_t constructor_function) {
     constructors[typeid(T)] = constructor_function;
   }
 
@@ -101,9 +100,9 @@ public:
     return (T *)flags[name]->get_value_ptr();
   }
 
-  const unsigned get_found() const;
+  unsigned get_found() const;
 
-  const unsigned get_parsed() const;
+  unsigned get_parsed() const;
 
   bool parse(int argc, char **argv);
 
